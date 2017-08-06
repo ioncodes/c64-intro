@@ -19,6 +19,10 @@
 .var TIMERINTERRUPT = $dc0d
 .var RASTERINTERRUPT = $d019
 
+.var TEXTCOLOR = $0286
+.var BORDERCOLOR = $d020
+.var BACKGROUNDCOLOR = $d021
+
 
 start:
     sei
@@ -38,7 +42,7 @@ start:
     sta TIMERINTERRUPT
 
     ldy #160            // Raster Interrupt
-    sty $d012
+    sty RASTER
  
     lda #$01
     sta IMR             // Enable Raster Interrupt
@@ -53,10 +57,10 @@ start:
 
 init:
     lda #$00
-    sta $d020
-    sta $d021
-    sta $0286
-    jsr $e544
+    sta BORDERCOLOR
+    sta BACKGROUNDCOLOR
+    sta TEXTCOLOR
+    jsr $e536
     rts
 
 irq:
@@ -72,7 +76,7 @@ irq:
     jmp OLDIRQ
 
 raster:
-    inc $d020
+    inc BORDERCOLOR
     asl RASTERINTERRUPT
     jmp OLDIRQ
 
