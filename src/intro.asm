@@ -1,55 +1,80 @@
 :BasicUpstart2(start)
 
-start:
-    lda #$00
-    tax
-    tay
-    jsr $1000           // init routine of sid
+.var IRQLO = $0314
+.var IRQHI = $0315
+.var OLDIRQ = $ea81
 
-    jsr init_interrupts
+.var INITMUSIC = $1000
+.var PLAYMUSIC = $1006
+
+.var RASTER = $d012
+.var YSCROLL = $d011
+
+.var SCROLLREG = $d016
+
+.var CHARSET = $d018
+
+.var IMR = $d01a
+
+.var TIMERINTERRUPT = $dc0d
+.var RASTERINTERRUPT = $d019
+
+
+start:
+    sei
+
+    jsr init
+
+    lda #<irq
+    sta IRQLO
+    lda #>irq
+    sta IRQHI
+
+    lda YSCROLL
+    and #$7f
+    sta YSCROLL
+
+    lda #$81            // Timer Interrupt
+    sta TIMERINTERRUPT
+
+    ldy #160            // Raster Interrupt
+    sty $d012
+ 
+    lda #$01
+    sta IMR             // Enable Raster Interrupt
+
+    lda #$00
+
+    jsr INITMUSIC
+
+    cli
 
     jmp *               // Don't break :)
 
-init_interrupts:
-    sei                 // disable interrupts
-
-    lda #$7f            // Turn off VIC/CIA interrupts
-    sta $dc0d
-    sta $dd0d
-
-    lda #$01            // enable raster interrupts
-    sta $d01a
-
-    lda #$1b            // Enter text mode
-    sta $d011
-
-    ldx #$08            // Single color mode
-    stx $d016
-
-    ldy #$14            // Use default charset
-    sty $d018
-
-    lda #<irq           // Setup interrupt
-    ldx #>irq
-    sta $0314
-    stx $0315
-
-    ldy #160            // Trigger interrupt at this raster
-    sty $d012
-
-    lda $dc0d           // Clear pending interrupts
-    lda $dd0d
-    asl $d019
-
-    cli                 // Enable interrupts
-
+init:
+    lda #$00
+    sta $d020
+    sta $d021
+    sta $0286
+    jsr $e544
     rts
 
 irq:
-    jsr $1006           // Play sid sub routine
+    lda YSCROLL
+    bpl raster          // Trigger is Raster Interrupt
+    lda #$1a
+    sta CHARSET
+    lda #$c8
+    sta SCROLLREG
+
+    jsr PLAYMUSIC
+    lda TIMERINTERRUPT  // ACK Timer Interrupt, do this or it will start multiple times!
+    jmp OLDIRQ
+
+raster:
     inc $d020
-    asl $d019           // The interrupt triggered, so clear the interrupt flag
-    jmp $ea81           // Return from interrupt
+    asl RASTERINTERRUPT
+    jmp OLDIRQ
 
 .pc = $1000-$7e "Music"
 .import binary "music.sid"
