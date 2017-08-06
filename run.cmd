@@ -1,0 +1,1 @@
+x64 -autostart bin/intro.prg +confirmexit
