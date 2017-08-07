@@ -1,88 +1,129 @@
-:BasicUpstart2(start)
+#import "constants.asm"
+#import "helpers.asm"
 
-.var IRQLO = $0314
-.var IRQHI = $0315
-.var OLDIRQ = $ea81
+:BasicUpstart2(main)
 
-.var INITMUSIC = $1000
-.var PLAYMUSIC = $1006
+main:
+	sei						// Disable Interrupts
+	lda #$7f				// Disable CIA
+	sta CIA1_INTERRUPTS
+	sta CIA2_INTERRUPTS
 
-.var RASTER = $d012
-.var YSCROLL = $d011
+	lda #$35				// Bank out Kernal and Basic
+	sta $01					// $e000-$ffff
 
-.var SCROLLREG = $d016
+	lda #<irq1				// IRQ Low
+	ldx #>irq1				// IRQ High
+	sta IRQLO				// Interrupt Vector
+	stx IRQHI				// Interrupt Vector
 
-.var CHARSET = $d018
+	lda #$01				// Enable Raster Interrupts
+	sta IMR
+	lda #$34				// Interrupt on line 52
+	sta RASTER
+	lda #$1b				// Clear the High bit (lines 256-318)
+	sta YSCROLL
+	lda #$0e				// Set Background
+	sta BORDER_COLOR		// and Border colors
+	lda #$06
+	sta BACKGROUND_COLOR
+	lda #$00
+	sta SPRITES				// Turn off sprites
 
-.var IMR = $d01a
+	jsr clear_screen
+	jsr clear_color
 
-.var TIMERINTERRUPT = $dc0d
-.var RASTERINTERRUPT = $d019
+	asl INTERRUPT_STATUS	// Ack any previous raster interrupt
+	bit CIA1_INTERRUPTS		// reading the interrupt control registers
+	bit CIA2_INTERRUPTS		// clears them
 
-.var TEXTCOLOR = $0286
-.var BORDERCOLOR = $d020
-.var BACKGROUNDCOLOR = $d021
+	cli						// Allow IRQ's
 
+	jmp *					// Endless Loop
 
-start:
-    sei
+irq1:
+	sta reseta1				// Preserve A, X and Y
+	stx resetx1				// Registers
+	sty resety1				// using self modifying code
 
-    jsr init
+	lda #<irq2				// Set IRQ Vector
+	ldx #>irq2				// to point to the
+							// next part of the
+	sta IRQLO				// Stable IRQ
+	stx IRQHI			
+	inc RASTER				// set raster interrupt to the next line
+	asl INTERRUPT_STATUS	// Ack raster interrupt
+	tsx						// Store the stack pointer! It points to the
+	cli						// return information of irq1.
 
-    lda #<irq
-    sta IRQLO
-    lda #>irq
-    sta IRQHI
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop						// IRQ Triggers
+			
+irq2:
+	txs						// Restore stack pointer to point the return
+							// information of irq1, being our endless loop.
+	ldx #$09				// Wait exactly 9 * (2+3) cycles so that the raster line
+	dex						// is in the border
+	bne *-1
 
-    lda YSCROLL
-    and #$7f
-    sta YSCROLL
+	lda #$00				// Set the screen and border colors
+	ldx #$05
+	inc BORDER_COLOR
+	inc BACKGROUND_COLOR
 
-    lda #$81            // Timer Interrupt
-    sta TIMERINTERRUPT
-
-    ldy #160            // Raster Interrupt
-    sty RASTER
+	lda #<irq3				// Set IRQ to point
+	ldx #>irq3				// to subsequent IRQ
+	ldy #$68				// at line $68
+	sta IRQLO
+	stx IRQHI
+	sty RASTER
+	asl INTERRUPT_STATUS	// Ack RASTER IRQ
  
-    lda #$01
-    sta IMR             // Enable Raster Interrupt
+lab_a1: lda #$00			// Reload A,X,and Y
+.label reseta1 = lab_a1+1
 
-    lda #$00
+lab_x1: ldx #$00
+.label resetx1 = lab_x1+1
 
-    jsr INITMUSIC
+lab_y1: ldy #$00
+.label resety1 = lab_y1+1
+ 
+	rti						// Return from IRQ
 
-    cli
+irq3:
+	sta reseta2				// Preserve A,X,and Y
+	stx resetx2				// Registers
+	sty resety2
 
-    jmp *               // Don't break :)
+	ldy #$13				// Waste time so this
+	dey						// IRQ does not try
+	bne *-1					// to reoccur on the
+							// same line!
+	lda #$0f				// More colors
+	ldx #$07
+	sta BORDER_COLOR
+	stx BACKGROUND_COLOR
 
-init:
-    lda #$00
-    sta BORDERCOLOR
-    sta BACKGROUNDCOLOR
-    sta TEXTCOLOR
-    jsr $e536
-    rts
+	lda #<irq1				// Reset Vectors to
+	ldx #>irq1				// first IRQ again
+	ldy #$34				// at line $34
+	sta IRQLO
+	stx IRQHI
+	sty RASTER
+	asl INTERRUPT_STATUS	// Ack RASTER IRQ
+ 
+lab_a2: lda #$00			// Reload A,X,and Y
+.label reseta2  = lab_a2+1
 
-irq:
-    lda YSCROLL
-    bpl raster          // Trigger is Raster Interrupt
-    lda #$1a
-    sta CHARSET
-    lda #$c8
-    sta SCROLLREG
+lab_x2: ldx #$00
+.label resetx2  = lab_x2+1
 
-    jsr PLAYMUSIC
-    lda TIMERINTERRUPT  // ACK Timer Interrupt, do this or it will start multiple times!
-    jmp OLDIRQ
-
-raster:
-    cpy $d012 // wait for whatever.
-    bne *-3
-
-    inc BORDERCOLOR
-    inc BACKGROUNDCOLOR
-    asl RASTERINTERRUPT
-    jmp OLDIRQ
-
-.pc = $1000-$7e "Music"
-.import binary "music.sid"
+lab_y2: ldy #$00
+.label resety2  = lab_y2+1
+ 
+	rti						// Return from IRQ
