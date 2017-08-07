@@ -76,7 +76,11 @@ irq:
     jmp OLDIRQ
 
 raster:
+    cpy $d012 // wait for whatever.
+    bne *-3
+
     inc BORDERCOLOR
+    inc BACKGROUNDCOLOR
     asl RASTERINTERRUPT
     jmp OLDIRQ
 
