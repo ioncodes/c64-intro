@@ -20,7 +20,7 @@ main:
 
     lda #$01                // Enable Raster Interrupts
     sta IMR
-    lda #$0                 // Interrupt on line 52
+    lda #$0                 // Interrupt on line 0
     sta RASTER
     lda #$1b                // Clear the High bit (lines 256-318)
     sta YSCROLL
@@ -68,7 +68,10 @@ irq1:
     nop
     nop
     nop                     // IRQ Triggers
-            
+
+/*
+    Draw text or logo here?
+*/            
 irq2:
     txs                     // Restore stack pointer to point the return
                             // information of irq1, being our endless loop.
@@ -105,7 +108,7 @@ irq3:
     sta reseta2             // Preserve A,X,and Y
     stx resetx2             // Registers
     sty resety2
-    
+
     ldy #$13                // Waste time so this
     dey                     // IRQ does not try
     bne *-1                 // to reoccur on the
@@ -152,6 +155,16 @@ irq3:
     nop                     // Line finished drawing
 
     /*
+    ldy #$00  
+!loop:
+    lda text,Y 
+    beq !+
+    sta $0400,Y
+    iny 
+    jmp !loop-
+!:
+*/
+    /*
         Raster-critical code needs to be done above this comment. Don't forget to resync the rasters!
         This comment marks the beginning of the section which is raster independent (for example music).
         This means we can do things without the raster getting desynced.
@@ -166,7 +179,7 @@ irq3:
 
     lda #<irq1              // Reset Vectors to
     ldx #>irq1              // first IRQ again
-    ldy #$0                 // at line $34
+    ldy #$0                 // at line $0
     sta IRQLO
     stx IRQHI
     sty RASTER
@@ -185,3 +198,7 @@ lab_y2: ldy #$00
 
 .pc = $1000-$7e "Music"
 .import binary "../res/music.sid"
+
+text:
+    .text "hello world"
+    .byte $00
