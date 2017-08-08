@@ -9,8 +9,5 @@
 .const INTERRUPT_STATUS = $d019
 .const CIA1_INTERRUPTS  = $dc0d
 .const CIA2_INTERRUPTS  = $dd0d
-
-/*
 .const INIT_MUSIC       = $1000
 .const PLAY_MUSIC       = $1006
-*/

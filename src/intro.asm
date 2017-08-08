@@ -37,6 +37,9 @@ main:
     asl INTERRUPT_STATUS    // Ack any previous raster interrupt
     bit CIA1_INTERRUPTS     // reading the interrupt control registers
     bit CIA2_INTERRUPTS     // clears them
+    
+    lda #$00                // The accumulator needs to be $00 for the music subroutine
+    jsr INIT_MUSIC          // Initialize Music
 
     cli                     // Allow IRQ's
 
@@ -146,6 +149,14 @@ irq3:
     nop
     nop                     // Line finished drawing
 
+    /*
+        Raster-critical code needs to be done above this comment. Don't forget to resync the rasters!
+        This comment marks the beginning of the section which is raster independent (for example music).
+        This means we can do things without the raster getting desynced.
+    */
+
+    jsr PLAY_MUSIC          // Play the music
+
     lda #$00                // Make the rest black again
     ldx #$00
     sta BORDER_COLOR
@@ -169,3 +180,6 @@ lab_y2: ldy #$00
 .label resety2  = lab_y2+1
  
     rti                     // Return from IRQ
+
+.pc = $1000-$7e "Music"
+.import binary "../res/music.sid"
