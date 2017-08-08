@@ -1,5 +1,5 @@
-.const IRQLO            = $fffe
-.const IRQHI            = $ffff
+.const IRQLO            = $0314
+.const IRQHI            = $0315
 .const IMR              = $d01a
 .const RASTER           = $d012
 .const YSCROLL          = $d011
