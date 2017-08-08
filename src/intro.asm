@@ -20,14 +20,15 @@ main:
 
     lda #$01                // Enable Raster Interrupts
     sta IMR
-    lda #$34                // Interrupt on line 52
+    lda #$0                 // Interrupt on line 52
     sta RASTER
     lda #$1b                // Clear the High bit (lines 256-318)
     sta YSCROLL
-    lda #$0e                // Set Background
+    lda #$00                // Set Background
     sta BORDER_COLOR        // and Border colors
-    lda #$06
+    lda #$00
     sta BACKGROUND_COLOR
+
     lda #$00
     sta SPRITES             // Turn off sprites
 
@@ -79,13 +80,14 @@ irq2:
     ldx #$00
     sta BORDER_COLOR
     stx BACKGROUND_COLOR
-
+        
     lda #<irq3              // Set IRQ to point
     ldx #>irq3              // to subsequent IRQ
-    ldy #$68                // at line $68
+    ldy #$c0                // at line $c0
     sta IRQLO
     stx IRQHI
     sty RASTER
+
     asl INTERRUPT_STATUS    // Ack RASTER IRQ
  
 lab_a1: lda #$00            // Reload A,X,and Y
@@ -103,7 +105,7 @@ irq3:
     sta reseta2             // Preserve A,X,and Y
     stx resetx2             // Registers
     sty resety2
-
+    
     ldy #$13                // Waste time so this
     dey                     // IRQ does not try
     bne *-1                 // to reoccur on the
@@ -122,7 +124,7 @@ irq3:
 !:  cpy RASTER
     bne !-                  // line cycle
     sta BORDER_COLOR
-    cpx #51
+    cpx #57
     beq !+                  // end
     inx
     iny
@@ -164,7 +166,7 @@ irq3:
 
     lda #<irq1              // Reset Vectors to
     ldx #>irq1              // first IRQ again
-    ldy #$34                // at line $34
+    ldy #$0                 // at line $34
     sta IRQLO
     stx IRQHI
     sty RASTER
