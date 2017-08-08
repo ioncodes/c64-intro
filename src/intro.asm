@@ -1,4 +1,5 @@
-#import "constants.asm"
+#import "registers.asm"
+#import "data.asm"
 #import "helpers.asm"
 
 :BasicUpstart2(main)
@@ -72,9 +73,9 @@ irq2:
 	bne *-1
 
 	lda #$00				// Set the screen and border colors
-	ldx #$05
-	inc BORDER_COLOR
-	inc BACKGROUND_COLOR
+	ldx #$00
+	sta BORDER_COLOR
+	stx BACKGROUND_COLOR
 
 	lda #<irq3				// Set IRQ to point
 	ldx #>irq3				// to subsequent IRQ
@@ -104,8 +105,49 @@ irq3:
 	dey						// IRQ does not try
 	bne *-1					// to reoccur on the
 							// same line!
-	lda #$0f				// More colors
-	ldx #$07
+	lda #$00				// More colors
+	ldx #$00
+	sta BORDER_COLOR
+	stx BACKGROUND_COLOR
+
+	ldx #0
+	sta YSCROLL
+	ldy RASTER				// Get current raster
+	iny						// Start drawing at next line or the first line will be wrong
+!loop:
+	lda colors, X
+!:	cpy RASTER
+	bne !-					// line cycle
+	sta BORDER_COLOR
+	cpx #51
+	beq !+					// end
+	inx
+	iny
+	jmp !loop-
+
+!:
+	nop						// little hack to fix the last line
+	nop						// TODO: make it shorter and less hackish
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop
+	nop						// Line finished drawing
+
+	lda #$00				// Make the rest black again
+	ldx #$00
 	sta BORDER_COLOR
 	stx BACKGROUND_COLOR
 
